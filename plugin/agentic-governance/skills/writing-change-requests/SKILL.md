@@ -14,12 +14,15 @@ A request is ready when someone who has never met you could implement and test i
 5. **What must not change.** Existing behavior that people rely on.
 6. **Why now.** The business value or deadline.
 
-## Risk routing (what the assistant will do with it)
-| Touches | Result |
-|---|---|
-| Wording, layout, a simple threshold, a field label | Drafted automatically, reviewed by an engineer |
-| New field, flow, validation, report | Drafted, engineer review required |
-| Permissions, sharing, deletion, integrations, production data | Not automated; goes to an engineer |
+## What happens to your request
+Every change gets an engineer's review in the pull request. That is normal and not a delay.
+Separately, the assistant sorts requests into three routes:
+
+| Route | When | What happens |
+|---|---|---|
+| **Implement** | Reversible, small, no sensitive impact (wording, a threshold, a flow tweak, a new field) | Drafted automatically; any choices it made are listed as assumptions in the PR |
+| **Clarify** | The outcome is unclear, or two readings would give different work | It asks only the questions it truly cannot guess |
+| **Escalate** | Permissions, sharing, deletion, integrations, production data, security settings | Not automated; goes to an engineer |
 
 ## Anti-patterns
 - "Make it better / faster / nicer" with no measurable target.
