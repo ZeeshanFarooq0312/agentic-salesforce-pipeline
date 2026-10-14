@@ -1,0 +1,10 @@
+name: Hook tests
+on:
+  pull_request:
+    paths: [".claude/hooks/**", "tests/hooks/**"]
+jobs:
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash tests/hooks/test-block-prod-deploy.sh

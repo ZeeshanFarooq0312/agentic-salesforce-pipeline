@@ -1,0 +1,4 @@
+# Azure DevOps equivalent of validate-deploy.yml. TODO
+trigger: none
+steps:
+  - script: echo "TODO"

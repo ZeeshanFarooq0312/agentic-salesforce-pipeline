@@ -1,0 +1,15 @@
+name: Change request
+description: Propose a change in plain English
+labels: ["ai-change"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What should change?
+      description: Describe it in your own words. No technical detail needed.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does this matter (business value)?
