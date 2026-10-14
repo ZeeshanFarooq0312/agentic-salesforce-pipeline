@@ -37,6 +37,11 @@ Use those paths in every command and review. Do not hardcode `force-app/` or `ap
 - **React**: no secrets in `VITE_*` variables, tests with Testing Library.
 - **WordPress**: escape output, nonces and capability checks, `$wpdb->prepare`.
 
+## Guardrails you will meet
+Production deploys, secrets in written content, and edits to guardrails, CI workflows or env
+files are blocked by hooks. They are not suggestions; do not look for ways around them. If a
+block is wrong, say so and a human will change the rule.
+
 ## Review agents
 `apex-reviewer` (Salesforce), `code-reviewer` (.NET/React/WordPress/CI), `security-reviewer`
 (every PR), `test-writer` (missing tests), `change-request-triager` (business requests).
@@ -47,5 +52,6 @@ Rating thresholds (>= 10,000,000 Hot, >= 1,000,000 Warm, else Cold) are identica
 
 ## Commands
 - Agent-layer tests: `npm run test:agent-layer`
+- Rebuild the plugin after changing the agent layer: `npm run build:plugin`
 - Everything except the org: `npm run verify`
 - Change request, locally: `bash scripts/run-change-request.sh "<request>"`
