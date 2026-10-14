@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 # Runs the full local stack and the cross-system Playwright spec against your dev org.
 #   scripts/run-e2e-local.sh [org-alias]      (default alias: dev)
-# Needs: sf CLI (Node 22+), jq, dotnet 8 SDK, npm. The access token stays in this
-# process's environment only; it is never written to disk.
+# Needs: dotnet 8 SDK, npm, curl, and these exported in your shell (never commit them):
+#   SF_INSTANCE_URL     My Domain URL (falls back to `sf org display` if the CLI is available)
+#   SF_CLIENT_ID        Connected/External Client App consumer key (client-credentials flow)
+#   SF_CLIENT_SECRET    its consumer secret
+# The Salesforce CLI redacts access tokens, so this uses the same OAuth client-credentials
+# flow as CI instead of extracting a session token.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 org="${1:-dev}"
 export PATH="$HOME/.dotnet:$PATH"
 
-for c in sf jq dotnet npm; do command -v "$c" >/dev/null || { echo "missing: $c" >&2; exit 1; }; done
+for c in dotnet npm curl; do command -v "$c" >/dev/null || { echo "missing: $c" >&2; exit 1; }; done
 
-info="$(sf org display --target-org "$org" --verbose --json)"
-export SF_INSTANCE_URL="$(jq -r '.result.instanceUrl' <<<"$info")"
-export SF_ACCESS_TOKEN="$(jq -r '.result.accessToken' <<<"$info")"
+if [ -z "${SF_INSTANCE_URL:-}" ] && command -v sf >/dev/null && command -v jq >/dev/null; then
+  SF_INSTANCE_URL="$(sf org display --target-org "$org" --json | jq -r '.result.instanceUrl')"
+fi
+: "${SF_INSTANCE_URL:?set SF_INSTANCE_URL}" "${SF_CLIENT_ID:?set SF_CLIENT_ID}" "${SF_CLIENT_SECRET:?set SF_CLIENT_SECRET}"
+export SF_INSTANCE_URL SF_CLIENT_ID SF_CLIENT_SECRET
 export AllowedOrigin="http://localhost:5173"
 export REACT_URL="http://localhost:5173"
 export VITE_API_URL="http://localhost:5000"

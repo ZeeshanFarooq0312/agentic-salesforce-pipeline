@@ -18,8 +18,34 @@ public class SalesforceClientTests
         }
     }
 
-    private static SalesforceClient Client(StubHandler handler) =>
-        new(new HttpClient(handler) { BaseAddress = new Uri("https://example.my.salesforce.com/") });
+    private sealed class FakeTokens : ITokenProvider
+    {
+        public int Calls { get; private set; }
+        public int Refreshes { get; private set; }
+        public Task<string> GetTokenAsync(bool forceRefresh = false, CancellationToken ct = default)
+        {
+            Calls++;
+            if (forceRefresh) Refreshes++;
+            return Task.FromResult(forceRefresh ? "fresh-token" : "old-token");
+        }
+    }
+
+    private sealed class SequenceHandler(params HttpStatusCode[] statuses) : HttpMessageHandler
+    {
+        public List<string?> AuthHeaders { get; } = new();
+        private int i;
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            AuthHeaders.Add(request.Headers.Authorization?.Parameter);
+            var status = statuses[Math.Min(i++, statuses.Length - 1)];
+            var body = status == HttpStatusCode.Created ? "{\"id\":\"001REFRESHED\"}" : "[]";
+            return Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body) });
+        }
+    }
+
+    private static SalesforceClient Client(HttpMessageHandler handler, ITokenProvider? tokens = null) =>
+        new(new HttpClient(handler) { BaseAddress = new Uri("https://example.my.salesforce.com/") },
+            tokens ?? new FakeTokens());
 
     [Fact]
     public async Task Creates_account_and_returns_id()
@@ -41,5 +67,34 @@ public class SalesforceClientTests
         var ex = await Assert.ThrowsAsync<SalesforceException>(() =>
             Client(handler).CreateAccountAsync(new CreateAccountRequest("Acme", 1)));
         Assert.Contains("400", ex.Message);
+    }
+
+    [Fact]
+    public async Task Sends_bearer_token_from_provider()
+    {
+        var handler = new SequenceHandler(HttpStatusCode.Created);
+        await Client(handler).CreateAccountAsync(new CreateAccountRequest("Acme", 1));
+        Assert.Equal(new[] { "old-token" }, handler.AuthHeaders);
+    }
+
+    [Fact]
+    public async Task Refreshes_token_once_on_401_then_succeeds()
+    {
+        var tokens = new FakeTokens();
+        var handler = new SequenceHandler(HttpStatusCode.Unauthorized, HttpStatusCode.Created);
+        var result = await Client(handler, tokens).CreateAccountAsync(new CreateAccountRequest("Acme", 1));
+
+        Assert.Equal("001REFRESHED", result.Id);
+        Assert.Equal(new[] { "old-token", "fresh-token" }, handler.AuthHeaders);
+        Assert.Equal(1, tokens.Refreshes);
+    }
+
+    [Fact]
+    public async Task Does_not_loop_when_401_persists()
+    {
+        var handler = new SequenceHandler(HttpStatusCode.Unauthorized);
+        await Assert.ThrowsAsync<SalesforceException>(() =>
+            Client(handler).CreateAccountAsync(new CreateAccountRequest("Acme", 1)));
+        Assert.Equal(2, handler.AuthHeaders.Count);
     }
 }

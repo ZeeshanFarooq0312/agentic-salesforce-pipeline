@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -13,8 +15,8 @@ public interface ISalesforceClient
     Task<CreateAccountResult> CreateAccountAsync(CreateAccountRequest request, CancellationToken ct = default);
 }
 
-/// <summary>Creates Accounts through the Salesforce REST API. Auth comes from the HttpClient's headers.</summary>
-public class SalesforceClient(HttpClient http) : ISalesforceClient
+/// <summary>Creates Accounts through the Salesforce REST API, refreshing the token once on 401.</summary>
+public class SalesforceClient(HttpClient http, ITokenProvider tokens) : ISalesforceClient
 {
     public const string ApiVersion = "v62.0";
 
@@ -23,11 +25,9 @@ public class SalesforceClient(HttpClient http) : ISalesforceClient
 
     public async Task<CreateAccountResult> CreateAccountAsync(CreateAccountRequest request, CancellationToken ct = default)
     {
-        var res = await http.PostAsJsonAsync(
-            $"services/data/{ApiVersion}/sobjects/Account",
-            new { Name = request.Name, AnnualRevenue = request.AnnualRevenue },
-            SalesforceJson,
-            ct);
+        var res = await PostAccountAsync(request, forceRefresh: false, ct);
+        if (res.StatusCode == HttpStatusCode.Unauthorized)
+            res = await PostAccountAsync(request, forceRefresh: true, ct);
 
         if (!res.IsSuccessStatusCode)
         {
@@ -37,5 +37,16 @@ public class SalesforceClient(HttpClient http) : ISalesforceClient
 
         var body = await res.Content.ReadFromJsonAsync<JsonElement>(ct);
         return new CreateAccountResult(body.GetProperty("id").GetString()!);
+    }
+
+    private async Task<HttpResponseMessage> PostAccountAsync(CreateAccountRequest request, bool forceRefresh, CancellationToken ct)
+    {
+        var token = await tokens.GetTokenAsync(forceRefresh, ct);
+        using var msg = new HttpRequestMessage(HttpMethod.Post, $"services/data/{ApiVersion}/sobjects/Account")
+        {
+            Content = JsonContent.Create(new { Name = request.Name, AnnualRevenue = request.AnnualRevenue }, options: SalesforceJson),
+        };
+        msg.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return await http.SendAsync(msg, ct);
     }
 }

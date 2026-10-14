@@ -5,17 +5,20 @@ import { test, expect, APIRequestContext } from '@playwright/test';
  * Salesforce REST API (Apex trigger rating + Flow-created Task), with data setup and teardown.
  *
  * Required env:
- *   REACT_URL         the running React app (e.g. http://localhost:5173)
- *   SF_INSTANCE_URL   e.g. https://<mydomain>.develop.my.salesforce.com
- *   SF_ACCESS_TOKEN   session/access token for the same org the API writes to
+ *   REACT_URL          the running React app (e.g. http://localhost:5173)
+ *   SF_INSTANCE_URL    My Domain URL, e.g. https://<mydomain>.develop.my.salesforce.com
+ *   SF_CLIENT_ID       Connected/External Client App consumer key (client-credentials flow)
+ *   SF_CLIENT_SECRET   its consumer secret
+ * The same credentials the .NET API uses, so the test reads the org the API wrote to.
  */
 const REACT_URL = process.env.REACT_URL;
 const SF = process.env.SF_INSTANCE_URL;
-const TOKEN = process.env.SF_ACCESS_TOKEN;
+const CLIENT_ID = process.env.SF_CLIENT_ID;
+const CLIENT_SECRET = process.env.SF_CLIENT_SECRET;
 const API_VERSION = 'v62.0';
 const PREFIX = 'E2E-';
 
-const headers = { Authorization: `Bearer ${TOKEN}` };
+let headers: Record<string, string> = {};
 
 async function soql(request: APIRequestContext, query: string) {
   const res = await request.get(`${SF}/services/data/${API_VERSION}/query`, {
@@ -33,12 +36,19 @@ async function deleteAccount(request: APIRequestContext, id: string) {
 }
 
 test.describe('account wizard -> Salesforce', () => {
-  test.skip(!REACT_URL || !SF || !TOKEN, 'REACT_URL, SF_INSTANCE_URL and SF_ACCESS_TOKEN are required');
+  test.skip(!REACT_URL || !SF || !CLIENT_ID || !CLIENT_SECRET, 'REACT_URL, SF_INSTANCE_URL, SF_CLIENT_ID and SF_CLIENT_SECRET are required');
 
   const createdIds: string[] = [];
 
   test.beforeAll(async ({ request }) => {
-    // Setup: remove stale records left by an interrupted earlier run.
+    // Setup 1: authenticate with the client-credentials flow (no user session involved).
+    const tokenRes = await request.post(`${SF}/services/oauth2/token`, {
+      form: { grant_type: 'client_credentials', client_id: CLIENT_ID!, client_secret: CLIENT_SECRET! },
+    });
+    expect(tokenRes.ok(), `token request failed: ${tokenRes.status()}`).toBeTruthy();
+    headers = { Authorization: `Bearer ${(await tokenRes.json()).access_token}` };
+
+    // Setup 2: remove stale records left by an interrupted earlier run.
     const stale = await soql(request, `SELECT Id FROM Account WHERE Name LIKE '${PREFIX}%'`);
     for (const r of stale) await deleteAccount(request, r.Id);
   });

@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,14 +6,21 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(builder.Configuration["AllowedOrigin"] ?? "http://localhost:5173")
      .AllowAnyHeader().AllowAnyMethod()));
 
-// SF_INSTANCE_URL / SF_ACCESS_TOKEN come from environment variables or a secret store, never source.
-builder.Services.AddHttpClient<ISalesforceClient, SalesforceClient>(c =>
+// Salesforce settings come from environment variables or a secret store, never source:
+//   SF_INSTANCE_URL (My Domain), and either SF_CLIENT_ID + SF_CLIENT_SECRET (preferred)
+//   or SF_ACCESS_TOKEN (local debugging only).
+var instanceUrl = new Uri(builder.Configuration["SF_INSTANCE_URL"] ?? "https://salesforce.invalid/");
+
+builder.Services.AddSingleton<ITokenProvider>(_ =>
 {
-    c.BaseAddress = new Uri(builder.Configuration["SF_INSTANCE_URL"] ?? "https://salesforce.invalid/");
-    var token = builder.Configuration["SF_ACCESS_TOKEN"];
-    if (!string.IsNullOrEmpty(token))
-        c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    var clientId = builder.Configuration["SF_CLIENT_ID"];
+    var clientSecret = builder.Configuration["SF_CLIENT_SECRET"];
+    if (!string.IsNullOrEmpty(clientId) && !string.IsNullOrEmpty(clientSecret))
+        return new ClientCredentialsTokenProvider(new HttpClient { BaseAddress = instanceUrl }, clientId, clientSecret);
+
+    return new StaticTokenProvider(builder.Configuration["SF_ACCESS_TOKEN"] ?? "");
 });
+builder.Services.AddHttpClient<ISalesforceClient, SalesforceClient>(c => c.BaseAddress = instanceUrl);
 
 var app = builder.Build();
 app.UseCors();
