@@ -18,11 +18,15 @@ public class SalesforceClient(HttpClient http) : ISalesforceClient
 {
     public const string ApiVersion = "v62.0";
 
+    // Salesforce field API names are PascalCase (Name, AnnualRevenue); do not camel-case them.
+    private static readonly JsonSerializerOptions SalesforceJson = new() { PropertyNamingPolicy = null };
+
     public async Task<CreateAccountResult> CreateAccountAsync(CreateAccountRequest request, CancellationToken ct = default)
     {
         var res = await http.PostAsJsonAsync(
             $"services/data/{ApiVersion}/sobjects/Account",
             new { Name = request.Name, AnnualRevenue = request.AnnualRevenue },
+            SalesforceJson,
             ct);
 
         if (!res.IsSuccessStatusCode)
