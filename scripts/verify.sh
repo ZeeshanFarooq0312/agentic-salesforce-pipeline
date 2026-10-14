@@ -7,7 +7,8 @@
 #     --only STACK      run just one of: salesforce dotnet react wordpress
 # Exit 0 = everything that ran passed. Exit 1 = at least one check failed (summary on stderr).
 set -uo pipefail
-cd "$(dirname "$0")/.."
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "${VERIFY_ROOT:-${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}}"
 export PATH="$HOME/.dotnet:$PATH"
 
 CHANGED=0 BASE=HEAD FULL=0 SKIP_SF=0 ONLY=
@@ -22,9 +23,9 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-info="$(python3 scripts/detect-stacks.py)"
+info="$(python3 "$SCRIPT_DIR/detect-stacks.py")"
 if [ "$CHANGED" = 1 ]; then
-  stacks="$(python3 scripts/detect-stacks.py --changed "$BASE")"
+  stacks="$(python3 "$SCRIPT_DIR/detect-stacks.py" --changed "$BASE")"
 else
   stacks="$(python3 - <<PY
 import json; d=json.loads('''$info''')
