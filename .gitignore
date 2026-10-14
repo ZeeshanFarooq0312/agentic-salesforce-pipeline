@@ -7,3 +7,6 @@ node_modules/
 .claude/settings.local.json
 playwright-report/
 test-results/
+dist/
+bin/
+obj/

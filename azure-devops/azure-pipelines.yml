@@ -1,4 +1,101 @@
-# Azure DevOps equivalent of validate-deploy.yml. TODO
-trigger: none
-steps:
-  - script: echo "TODO"
+# Azure DevOps equivalent of the GitHub Actions workflows.
+# Path filters keep each app's stages from running when only another app changes.
+trigger:
+  branches: { include: [main] }
+  paths:
+    include: [force-app, apps]
+
+pr:
+  branches: { include: [main] }
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  sfSandboxAlias: sandbox
+
+stages:
+  - stage: Salesforce
+    displayName: Salesforce validate
+    jobs:
+      - job: validate
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: "20.x" }
+          - script: npm install -g @salesforce/cli
+            displayName: Install Salesforce CLI
+          - script: |
+              echo "$(SF_SANDBOX_AUTH_URL)" > auth.txt
+              sf org login sfdx-url --sfdx-url-file auth.txt --alias $(sfSandboxAlias)
+              rm auth.txt
+            displayName: Auth to sandbox
+          - script: sf project deploy validate --source-dir force-app --target-org $(sfSandboxAlias) --test-level RunLocalTests
+            displayName: Validate only (no deploy)
+
+  - stage: DotNet
+    displayName: .NET API
+    dependsOn: []
+    jobs:
+      - job: test
+        steps:
+          - task: UseDotNet@2
+            inputs: { version: 8.0.x }
+          - script: dotnet test apps/dotnet-api/tests/Api.Tests --configuration Release
+            displayName: dotnet test
+      - job: deploy_staging
+        dependsOn: test
+        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+        steps:
+          - task: UseDotNet@2
+            inputs: { version: 8.0.x }
+          - script: |
+              dotnet publish apps/dotnet-api/src/Api -c Release -o out
+              cd out && zip -r ../api.zip .
+            displayName: Publish
+          - task: AzureCLI@2
+            displayName: Deploy to staging slot
+            inputs:
+              azureSubscription: $(AZURE_SERVICE_CONNECTION)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: az webapp deploy --name $(AZURE_WEBAPP_NAME) --resource-group $(AZURE_RESOURCE_GROUP) --slot staging --src-path api.zip --type zip
+
+  - stage: React
+    displayName: React web
+    dependsOn: []
+    jobs:
+      - job: test_build
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: "20.x" }
+          - script: |
+              cd apps/react-web
+              npm install --no-audit --no-fund
+              npm test
+              npm run build
+            displayName: Test and build
+
+  - stage: WordPress
+    displayName: WordPress plugin
+    dependsOn: []
+    jobs:
+      - job: lint_test
+        steps:
+          - script: |
+              sudo apt-get install -y php-cli
+              find apps/wordpress-plugin -name '*.php' -print0 | xargs -0 -n1 php -l
+              php apps/wordpress-plugin/tests/rating-test.php
+            displayName: Lint and unit test
+
+  - stage: Production
+    displayName: Production release (manual approval via Environment)
+    dependsOn: [Salesforce, DotNet, React, WordPress]
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: release
+        environment: production   # configure Approvals and checks on this environment
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: echo "Swap staging slot to production / run sf project deploy start against production (approval-gated)"
