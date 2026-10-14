@@ -1,0 +1,12 @@
+{
+  "name": "agentic-salesforce-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:hooks": "bash tests/hooks/test-block-prod-deploy.sh"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}

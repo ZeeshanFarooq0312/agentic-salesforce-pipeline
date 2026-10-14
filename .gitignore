@@ -1,0 +1,9 @@
+node_modules/
+.sfdx/
+.sf/
+.localdevserver/
+*.log
+.env
+.claude/settings.local.json
+playwright-report/
+test-results/
