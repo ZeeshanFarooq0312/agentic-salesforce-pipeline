@@ -60,14 +60,26 @@ client's project directory. `--check` fails CI if the generated plugin is stale.
 plugin's hooks against a throwaway repo with a layout unlike this one.
 
 ## Evals
-`evals/` holds five golden cases for the triager (risky permission change, integration,
-production-data deletion, ambiguous request, trivial label change). They run with
-`claude plugin eval plugin/agentic-governance --runs 1 --no-publish` and score the plugin
-against a no-plugin baseline.
+`evals/` holds six golden cases for the triager: risky permission change, integration,
+production-data deletion, ambiguous request, trivial label change, and a regression case for a
+low-risk flow edit. Each checks the triager's **Route** (`implement`, `clarify` or `escalate`).
+Run them with `claude plugin eval plugin/agentic-governance --runs 1 --no-publish`; they score
+the plugin against a no-plugin baseline.
 
-Last run: 5 of 5 pass with the plugin; the no-plugin baseline passes only the ambiguous case
-(mean uplift +0.8, about $0.79). One run per case is a smoke signal, not a statistic; use
-`--runs 3` or more before drawing conclusions.
+Latest results: 6 of 6 pass with the plugin. The no-plugin baseline fails them all, which is the
+expected result because the baseline has no triager (mean uplift about +0.9, under $1.50 per full run).
+One run per case is a smoke signal, not a statistic; use `--runs 3` or more before quoting scores.
+
+### What the first live use taught us
+A live `/propose-change` on a one-line flow edit was stopped and sent to an engineer queue even
+though the triager rated it low risk. Two flaws: "needs engineer review" meant PR review in one
+place and "do not implement" in another, and formatting questions were treated as blockers. The
+fix was a three-way Route with separate Assumptions (non-blocking) and Blocking questions, and
+a regression eval built from the real request.
+
+The same case then failed once for a different reason: the eval ran in an isolated folder with
+no repo, so the triager correctly said the flow did not exist. Repository context is now stated
+in the eval prompt. Lesson: when an eval fails, check the harness before the prompt.
 
 ## What this does not do (known limits)
 - **The Bash protection is best-effort.** Protected-paths matches a write verb plus a
