@@ -32,6 +32,20 @@ changes; humans and CI approve and ship them.
 - E2E: `npx playwright test`
 - Hook tests: `bash tests/hooks/test-block-prod-deploy.sh`
 
+## Per-stack commands
+- .NET API (`apps/dotnet-api`): `dotnet test apps/dotnet-api/tests/Api.Tests`
+- React (`apps/react-web`): `cd apps/react-web && npm install && npm test && npm run build`
+- WordPress (`apps/wordpress-plugin`): `php tests/rating-test.php` (run inside the plugin dir) and `php -l` on changed files
+- Azure: deploy only with `--slot staging` or `--what-if`; production swaps happen in CI behind an Environment approval.
+
+## Cross-stack invariant
+Rating thresholds (>= 10,000,000 Hot, >= 1,000,000 Warm, else Cold) must stay identical in
+Apex (`AccountService`), C# (`RatingService`) and PHP (`acct_rating_for`). Change all three
+together and update every test.
+
+## Review agents
+- `apex-reviewer` for `force-app/`; `code-reviewer` for `apps/`, `.github/`, `azure-devops/`.
+
 ## Layout
-- `force-app/` source, `.claude/` agents/commands/hooks, `.github/workflows/` CI,
+- `force-app/` Salesforce source, `apps/` .NET / React / WordPress samples, `.claude/` agents/commands/hooks, `.github/workflows/` CI,
   `docs/` governance and training material.
