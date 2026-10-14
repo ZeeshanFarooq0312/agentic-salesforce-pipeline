@@ -1,0 +1,32 @@
+name: CI gate
+# Always runs on PRs and reports one stable status ("gate") that branch protection can require,
+# even though the per-app workflows are path-filtered and may be skipped.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Run checks for changed areas
+        run: |
+          changed="$(git diff --name-only origin/${{ github.base_ref }}...HEAD)"
+          has() { echo "$changed" | grep -Eq "$1"; }
+          if has '^(\.claude/hooks|tests/hooks)/'; then
+            bash tests/hooks/test-block-prod-deploy.sh
+          fi
+          if has '^apps/react-web/'; then
+            (cd apps/react-web && npm install --no-audit --no-fund && npm test && npm run build)
+          fi
+          if has '^apps/wordpress-plugin/'; then
+            find apps/wordpress-plugin -name '*.php' -print0 | xargs -0 -n1 php -l
+            php apps/wordpress-plugin/tests/rating-test.php
+          fi
+          echo "gate passed"

@@ -2,6 +2,18 @@ name: Change request
 description: Propose a change in plain English
 labels: ["ai-change"]
 body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area is this about?
+      options:
+        - Web app (React)
+        - API (.NET)
+        - WordPress site
+        - Salesforce
+        - Not sure
+    validations:
+      required: true
   - type: textarea
     id: what
     attributes:

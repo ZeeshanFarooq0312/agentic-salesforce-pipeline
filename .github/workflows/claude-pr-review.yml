@@ -2,7 +2,7 @@ name: Claude PR review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths: ["force-app/**", ".claude/**"]
+    paths: ["force-app/**", "apps/**", ".claude/**", ".github/**", "azure-devops/**"]
 
 permissions:
   contents: read
@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   review:
+    # Skip forks (no secrets).
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,12 +20,19 @@ jobs:
         with: { node-version: 20 }
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
+      - name: Pick reviewer by changed paths
+        id: pick
+        run: |
+          changed="$(git diff --name-only origin/${{ github.base_ref }}...HEAD)"
+          agents=""
+          echo "$changed" | grep -q '^force-app/' && agents="apex-reviewer"
+          echo "$changed" | grep -Eq '^(apps|\.github|azure-devops|\.claude)/' && agents="$agents code-reviewer"
+          echo "agents=${agents:-code-reviewer}" >> "$GITHUB_OUTPUT"
       - name: Headless review (read-only tools)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          GH_TOKEN: ${{ github.token }}
         run: |
-          claude -p "Use the apex-reviewer subagent on the diff between origin/${{ github.base_ref }} and HEAD. Output a concise markdown review." \
+          claude -p "Review the diff between origin/${{ github.base_ref }} and HEAD. Use these subagents as appropriate: ${{ steps.pick.outputs.agents }}. Output one concise markdown review with a clear APPROVE or REQUEST CHANGES verdict." \
             --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*)" \
             --max-turns 15 \
             --output-format text > review.md

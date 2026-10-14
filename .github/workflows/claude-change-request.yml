@@ -27,5 +27,5 @@ jobs:
           git config user.name "claude-bot"
           git config user.email "claude-bot@users.noreply.github.com"
           claude -p "Run /propose-change using the body of GitHub issue #$ISSUE_NUMBER (read it with gh issue view). Open a PR that links the issue. Do not merge or deploy." \
-            --allowedTools "Read,Edit,Write,Grep,Glob,Bash(git:*),Bash(gh issue view:*),Bash(gh pr create:*)" \
+            --allowedTools "Read,Edit,Write,Grep,Glob,Bash(git:*),Bash(gh issue view:*),Bash(gh pr create:*),Bash(npm install:*),Bash(npm test:*),Bash(npm run build:*),Bash(npx vitest:*),Bash(php:*)" \
             --max-turns 30

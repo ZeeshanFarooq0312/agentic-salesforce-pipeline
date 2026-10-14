@@ -6,7 +6,8 @@
    GitHub secret `SF_SANDBOX_AUTH_URL`. Repeat for `SF_STAGING_AUTH_URL`, `SF_PROD_AUTH_URL`.
 3. Add secret `ANTHROPIC_API_KEY` and `SF_STAGING_URL` (for Playwright).
 4. Create GitHub Environments `ai-change`, `staging`, `production`; add required reviewers.
-5. Enable branch protection on `main`.
+5. Enable branch protection on `main`: `bash scripts/setup-branch-protection.sh <owner/repo>`
+   (requires PR, 1 approval, and the always-on `gate` status from `ci-gate.yml`).
 
 ## Day to day
 | Event | What runs |
