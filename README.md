@@ -13,6 +13,8 @@ Claude Code drafts them; engineers and CI gate what ships.
 | Slash commands | [.claude/commands/](.claude/commands/) |
 | MCP servers | [.mcp.json](.mcp.json) |
 | Headless CI workflows | [.github/workflows/](.github/workflows/) |
+| Sample apps (.NET, React, WordPress) | [apps/](apps/) |
+| Azure DevOps pipeline | [azure-devops/](azure-devops/) |
 | E2E tests | [tests/e2e/](tests/e2e/) |
 | Docs | [docs/](docs/) |
 

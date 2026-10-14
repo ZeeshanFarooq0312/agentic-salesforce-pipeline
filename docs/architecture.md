@@ -35,8 +35,22 @@ flowchart TD
   scoped to the `production` environment.
 - The agent can open PRs but cannot merge or deploy.
 
-## Extending to other stacks
-The same pattern (issue form -> triage -> branch/PR -> review -> gated deploy) applies to
-.NET/C# (`dotnet test`, Azure App Service), React (`npm test`, Static Web Apps) and
-WordPress (WP-CLI, staging site). Swap the validate/deploy/test commands in the
-workflows and `CLAUDE.md`.
+## Multi-stack layout
+```mermaid
+flowchart LR
+  RW[apps/react-web] -->|GET /api/rating| API[apps/dotnet-api on Azure App Service]
+  WP[apps/wordpress-plugin shortcode] -. same thresholds .- API
+  API -. same thresholds .- SF[force-app AccountService]
+```
+
+| App | Stack | CI check | Deploy target |
+|---|---|---|---|
+| `force-app/` | Salesforce Apex/LWC | `sf project deploy validate` + Apex tests | sandbox -> staging -> production (gated) |
+| `apps/dotnet-api/` | .NET 8 minimal API | `dotnet test` | Azure App Service `staging` slot, swap gated |
+| `apps/react-web/` | React + Vite | Vitest + build | static hosting (add per environment) |
+| `apps/wordpress-plugin/` | PHP plugin | `php -l` + unit test | WordPress staging site |
+
+Each app has a path-filtered GitHub workflow, plus one Azure DevOps pipeline
+(`azure-devops/azure-pipelines.yml`) with per-app stages and a gated production stage.
+The rating thresholds are a deliberate cross-stack invariant, verified end to end by
+`tests/e2e/cross-system.spec.ts`.
