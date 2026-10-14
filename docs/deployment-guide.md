@@ -4,7 +4,10 @@
 1. Create a Dev Hub (or use a sandbox) and authenticate: `sf org login web --alias sandbox`.
 2. Get its auth URL: `sf org display --target-org sandbox --verbose` and store as
    GitHub secret `SF_SANDBOX_AUTH_URL`. Repeat for `SF_STAGING_AUTH_URL`, `SF_PROD_AUTH_URL`.
-3. Add secret `ANTHROPIC_API_KEY` and `SF_STAGING_URL` (for Playwright).
+3. Add ONE Claude credential as a repo secret, plus `SF_STAGING_URL` (for Playwright):
+   - `CLAUDE_CODE_OAUTH_TOKEN`: run `claude setup-token` locally (needs a Claude Pro/Max
+     subscription). Good for personal/portfolio use; usage counts against your plan limits.
+   - `ANTHROPIC_API_KEY`: from the Anthropic Console, pay-as-you-go. Preferred for team CI.
 4. Create GitHub Environments `ai-change`, `staging`, `production`; add required reviewers.
 5. Enable branch protection on `main`: `bash scripts/setup-branch-protection.sh <owner/repo>`
    (requires PR, 1 approval, and the always-on `gate` status from `ci-gate.yml`).

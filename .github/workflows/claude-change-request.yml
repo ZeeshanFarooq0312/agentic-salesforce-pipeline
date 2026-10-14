@@ -20,7 +20,9 @@ jobs:
       - run: npm install -g @anthropic-ai/claude-code
       - name: Implement on a branch and open a PR
         env:
+          # Either credential works; the CLI uses whichever is set.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ github.token }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
         run: |

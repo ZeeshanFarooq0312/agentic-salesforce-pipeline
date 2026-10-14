@@ -30,7 +30,9 @@ jobs:
           echo "agents=${agents:-code-reviewer}" >> "$GITHUB_OUTPUT"
       - name: Headless review (read-only tools)
         env:
+          # Either credential works; the CLI uses whichever is set.
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           claude -p "Review the diff between origin/${{ github.base_ref }} and HEAD. Use these subagents as appropriate: ${{ steps.pick.outputs.agents }}. Output one concise markdown review with a clear APPROVE or REQUEST CHANGES verdict." \
             --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*)" \
