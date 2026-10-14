@@ -4,6 +4,8 @@
       "Bash(sf project deploy validate:*)",
       "Bash(sf apex run test:*)",
       "Bash(sf project retrieve:*)",
+      "Bash(python3 scripts/detect-stacks.py:*)",
+      "Bash(bash scripts/verify.sh:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git checkout -b ai/*)"
@@ -25,7 +27,12 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
-        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/apex-test-gate.sh" }]
+        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-lint.sh" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-verify-gate.sh", "timeout": 600 }]
       }
     ]
   }
