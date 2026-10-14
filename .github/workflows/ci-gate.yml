@@ -29,4 +29,9 @@ jobs:
             find apps/wordpress-plugin -name '*.php' -print0 | xargs -0 -n1 php -l
             php apps/wordpress-plugin/tests/rating-test.php
           fi
+          if has '^scripts/check-apex-coverage.sh'; then
+            sudo apt-get install -y jq >/dev/null
+            jq -n '{result:{summary:{outcome:"Passed",failing:0,testRunCoverage:"90%"}}}' > ok.json
+            bash scripts/check-apex-coverage.sh ok.json 85
+          fi
           echo "gate passed"
